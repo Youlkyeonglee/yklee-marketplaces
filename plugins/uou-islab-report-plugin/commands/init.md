@@ -2,14 +2,16 @@
 description: "Copy example files to the current project"
 ---
 
-Run the following bash command to copy example files into the current working directory:
+Run the following bash commands to copy example files into the current working directory:
 ```bash
-cp -r "$CLAUDE_PLUGIN_ROOT/examples/." .
+PLUGIN_DIR=$(find ~/.claude/plugins/cache -type d -name "uou-islab-report*" | head -1)
+cp -r "$PLUGIN_DIR/examples/." .
 ```
 
-After running the command, list all files that were copied by running:
+After running the command, list all copied files:
 ```bash
-find . -maxdepth 2 -newer "$CLAUDE_PLUGIN_ROOT/examples" -type f
+ls -la
 ```
 
 Then confirm to the user which files were successfully added to the project.
+

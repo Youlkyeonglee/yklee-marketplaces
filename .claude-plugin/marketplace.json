@@ -2,14 +2,14 @@
     "name": "yklee-marketplace",
     "owner":{
         "name": "yklee",
-        "email": "yklee@gmail.com"
+        "email": "yklee00815@gmail.com"
     },
     "plugins": [
         {
             "name": "uou-islab-report",
             "source": "./plugins/uou-islab-report-plugin",
             "description": "weekly and seminar report generator plugin",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": {
                 "name": "yklee"
             }
