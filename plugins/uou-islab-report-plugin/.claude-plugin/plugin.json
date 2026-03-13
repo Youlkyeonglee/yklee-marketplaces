@@ -1,0 +1,8 @@
+{
+    "name": "uou-islab-report",
+    "description": "A plugin for the UOU ISLab Format",
+    "version": "1.0.0",
+    "author": {
+        "name": "yklee"
+    }
+}

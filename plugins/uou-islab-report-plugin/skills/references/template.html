@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pure Vanilla Slide Presentation</title>
+
+<!-- Google Fonts: Noto Sans KR + Inter + JetBrains Mono -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;500&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+  /* ===== Design Tokens ===== */
+  :root {
+    --gold: #C6A55C;
+    --gold-light: #D4BA7A;
+    --gold-dim: rgba(198, 165, 92, 0.25);
+    --gold-border: rgba(198, 165, 92, 0.35);
+    --ivory: #F0E8D8;
+    --ivory-sub: #C8BFA8;
+    --ivory-dim: #8A8272;
+    --bg-deep: #0A0A0A;
+    --bg-card: #141414;
+    --bg-card-border: rgba(255,255,255,0.06);
+    --content-max: 1000px;
+    --font-kr: 'Noto Sans KR', sans-serif;
+    --font-en: 'Inter', 'Noto Sans KR', sans-serif;
+    --font-mono: 'JetBrains Mono', 'Consolas', monospace;
+    --transition-duration: 600ms;
+  }
+
+  /* ===== Reset & Base ===== */
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  html {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: var(--bg-deep);
+  }
+  body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: var(--bg-deep);
+    font-family: var(--font-kr);
+    color: var(--ivory);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* ===== Deck Container — true fullscreen ===== */
+  .deck {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  /* ===== Slide (stacked via absolute) ===== */
+  .slide {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity var(--transition-duration) ease, transform var(--transition-duration) ease;
+    will-change: opacity, transform;
+    z-index: 0;
+    background: var(--bg-deep);
+  }
+  .slide.active {
+    opacity: 1;
+    visibility: visible;
+    z-index: 2;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  /* --- Transition: Fade (default) --- */
+  .transition-fade .slide { /* default behavior via opacity */ }
+
+  /* --- Transition: Slide Left/Right --- */
+  .transition-slide .slide {
+    transform: translate3d(100%, 0, 0);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+  .transition-slide .slide.active {
+    transform: translate3d(0, 0, 0);
+  }
+  .transition-slide .slide.exit-left {
+    transform: translate3d(-100%, 0, 0);
+    opacity: 0;
+    z-index: 1;
+  }
+  .transition-slide .slide.exit-right {
+    transform: translate3d(100%, 0, 0);
+    opacity: 0;
+    z-index: 1;
+  }
+  .transition-slide .slide.enter-right {
+    transform: translate3d(100%, 0, 0);
+  }
+  .transition-slide .slide.enter-left {
+    transform: translate3d(-100%, 0, 0);
+  }
+
+  /* --- Transition: Zoom --- */
+  .transition-zoom .slide {
+    transform: scale(0.8);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+  }
+  .transition-zoom .slide.active {
+    transform: scale(1);
+  }
+  .transition-zoom .slide.exit-left,
+  .transition-zoom .slide.exit-right {
+    transform: scale(1.2);
+    opacity: 0;
+    z-index: 1;
+  }
+
+  /* ===== Slide Content (1000px) ===== */
+  .slide-content {
+    width: 100%;
+    max-width: var(--content-max);
+    padding: 3vh 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: var(--ivory);
+  }
+  .slide-content.align-left {
+    text-align: left;
+    align-items: flex-start;
+  }
+
+  /* ===== Typography ===== */
+  h1 {
+    font-family: var(--font-kr);
+    font-size: clamp(2.2rem, 5vw, 4rem);
+    font-weight: 700;
+    margin-bottom: 0.5em;
+    line-height: 1.3;
+    color: var(--ivory);
+    letter-spacing: -0.02em;
+  }
+  h2 {
+    font-family: var(--font-kr);
+    font-size: clamp(1.6rem, 3.5vw, 2.8rem);
+    font-weight: 700;
+    margin-bottom: 0.5em;
+    line-height: 1.35;
+    color: var(--ivory);
+    letter-spacing: -0.01em;
+  }
+  h3 {
+    font-family: var(--font-kr);
+    font-size: clamp(1.2rem, 2.6vw, 1.9rem);
+    font-weight: 700;
+    margin-bottom: 0.4em;
+    line-height: 1.4;
+    color: var(--ivory);
+  }
+  p, li {
+    font-family: var(--font-kr);
+    font-size: clamp(1.05rem, 2vw, 1.45rem);
+    line-height: 1.7;
+    color: var(--ivory-sub);
+  }
+  ul { text-align: left; list-style: none; padding: 0; width: 100%; }
+  ul li { padding: 0.35em 0; padding-left: 1.6em; position: relative; }
+  ul li::before { content: '\203A'; position: absolute; left: 0; color: var(--gold); font-weight: 700; }
+  ul ul { margin-top: 0.2em; padding-left: 0.6em; }
+  ul ul li { font-size: 0.92em; }
+  ul ul ul li { font-size: 0.88em; color: var(--ivory-dim); }
+
+  /* ===== Week Section ===== */
+  .week-heading {
+    font-family: var(--font-en);
+    font-size: clamp(1.15rem, 2.2vw, 1.6rem);
+    color: var(--gold);
+    margin-bottom: 0.3em;
+    letter-spacing: 0.03em;
+  }
+  .week-divider {
+    width: 100%;
+    height: 1px;
+    background: var(--gold-border);
+    margin: 0.8em 0;
+  }
+
+  /* ===== Fragment / Build Effect — auto stagger on slide enter ===== */
+  .fragment {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+  .fragment.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ===== Code Block ===== */
+  pre {
+    background: var(--bg-card);
+    border: 1px solid var(--bg-card-border);
+    border-radius: 10px;
+    padding: 1.2em 1.5em;
+    text-align: left;
+    font-size: clamp(0.85rem, 1.4vw, 1.1rem);
+    overflow-x: auto;
+    width: 100%;
+    max-width: 850px;
+    margin-top: 1em;
+  }
+  code {
+    color: var(--ivory-sub);
+    font-family: var(--font-mono);
+    font-size: inherit;
+  }
+  code .highlight-line {
+    background: var(--gold-dim);
+    display: inline-block;
+    width: calc(100% + 3em);
+    margin-left: -1.5em;
+    padding-left: 1.5em;
+    border-left: 3px solid var(--gold);
+  }
+  /* inline code */
+  .inline-code {
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    background: rgba(255,255,255,0.05);
+    padding: 0.15em 0.45em;
+    border-radius: 4px;
+    color: var(--gold-light);
+  }
+
+  /* ===== Progress Bar ===== */
+  .progress-bar {
+    position: fixed;
+    bottom: 0; left: 0;
+    width: 100%;
+    height: 3px;
+    background: rgba(255,255,255,0.04);
+    z-index: 100;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold), var(--gold-light));
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+
+  /* ===== Slide Counter ===== */
+  .slide-counter {
+    position: fixed;
+    bottom: 14px; left: 50%; transform: translateX(-50%);
+    color: var(--ivory-dim);
+    font-family: var(--font-en);
+    font-size: 0.88rem;
+    z-index: 100;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.05em;
+  }
+
+  /* ===== Top Bar ===== */
+  .top-bar {
+    position: fixed;
+    top: 14px; left: 20px;
+    z-index: 100;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  /* ===== Settings Button ===== */
+  .settings-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--ivory-dim);
+    width: 30px; height: 30px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .settings-btn:hover {
+    background: var(--gold-dim);
+    border-color: var(--gold-border);
+    color: var(--gold-light);
+  }
+  .settings-btn svg {
+    width: 16px; height: 16px;
+    fill: currentColor;
+  }
+
+  /* ===== Settings Popup ===== */
+  .settings-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 200;
+  }
+  .settings-overlay.visible { display: block; }
+
+  .settings-popup {
+    display: none;
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: #1a1a1a;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px;
+    padding: 28px 32px;
+    z-index: 201;
+    width: 380px;
+    max-width: 90vw;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+    font-family: var(--font-en);
+  }
+  .settings-popup.visible { display: block; }
+
+  .settings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  .settings-header h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #fff;
+    margin: 0;
+  }
+  .settings-close {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.4);
+    font-size: 1.5rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 4px;
+    transition: color 0.2s;
+  }
+  .settings-close:hover { color: #fff; }
+
+  .settings-section {
+    margin-bottom: 20px;
+  }
+  .settings-section:last-child { margin-bottom: 0; }
+
+  .settings-label {
+    display: block;
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+
+  .settings-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  /* Background options */
+  .bg-option,
+  .trans-option {
+    flex: 1;
+    padding: 8px 0;
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.04);
+    color: rgba(255,255,255,0.5);
+    font-family: var(--font-en);
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .bg-option:hover,
+  .trans-option:hover {
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.8);
+  }
+  .bg-option.active,
+  .trans-option.active {
+    background: var(--gold-dim);
+    border-color: var(--gold-border);
+    color: var(--gold-light);
+  }
+
+  /* Color presets */
+  .color-presets {
+    display: flex;
+    gap: 8px;
+  }
+  .color-swatch {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .color-swatch:hover {
+    transform: scale(1.15);
+  }
+  .color-swatch.active {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 2px rgba(198,165,92,0.3);
+  }
+
+  /* Hex input */
+  .hex-label {
+    color: rgba(255,255,255,0.3);
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+  .hex-input {
+    flex: 1;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 6px;
+    padding: 7px 10px;
+    color: #fff;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .hex-input:focus {
+    border-color: var(--gold-border);
+  }
+  .hex-input::placeholder {
+    color: rgba(255,255,255,0.2);
+  }
+  .hex-apply {
+    padding: 7px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--gold-border);
+    background: var(--gold-dim);
+    color: var(--gold-light);
+    font-family: var(--font-en);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .hex-apply:hover {
+    background: rgba(198,165,92,0.35);
+  }
+
+  /* ===== White Theme Override ===== */
+  .theme-white {
+    --bg-deep: #F5F5F5;
+    --bg-card: #FFFFFF;
+    --bg-card-border: rgba(0,0,0,0.08);
+  }
+  .theme-white .slide:nth-child(odd)  { background: radial-gradient(ellipse at 50% 40%, #FAFAFA 0%, #F5F5F5 70%); }
+  .theme-white .slide:nth-child(even) { background: radial-gradient(ellipse at 50% 40%, #F0F0F0 0%, #F5F5F5 70%); }
+  .theme-white .progress-fill { background: linear-gradient(90deg, #333, #555); }
+  .theme-white .settings-btn,
+  .theme-white .pdf-btn {
+    background: rgba(0,0,0,0.04);
+    border-color: rgba(0,0,0,0.1);
+    color: rgba(0,0,0,0.4);
+  }
+  .theme-white .settings-btn:hover,
+  .theme-white .pdf-btn:hover {
+    background: rgba(0,0,0,0.08);
+    color: rgba(0,0,0,0.7);
+  }
+  .theme-white .slide-counter { color: rgba(0,0,0,0.35); }
+
+  /* ===== Speaker Notes Overlay ===== */
+  .speaker-notes {
+    display: none;
+    position: fixed;
+    bottom: 24px; left: 20px; right: 20px;
+    background: rgba(10,10,10,0.92);
+    backdrop-filter: blur(12px);
+    color: var(--ivory-sub);
+    padding: 14px 18px;
+    border-radius: 8px;
+    font-family: var(--font-kr);
+    font-size: 0.82rem;
+    line-height: 1.6;
+    z-index: 100;
+    border: 1px solid rgba(255,255,255,0.06);
+    max-height: 28vh;
+    overflow-y: auto;
+  }
+  .speaker-notes.visible { display: block; }
+
+  /* ===== Slide backgrounds ===== */
+  .slide:nth-child(odd)  { background: radial-gradient(ellipse at 50% 40%, #12100E 0%, var(--bg-deep) 70%); }
+  .slide:nth-child(even) { background: radial-gradient(ellipse at 50% 40%, #0E0D0B 0%, var(--bg-deep) 70%); }
+
+  /* ===== Architecture Cards ===== */
+  .arch-cards {
+    display: flex;
+    gap: 12px;
+    margin-top: 1.5vh;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+  }
+  .arch-card {
+    background: var(--bg-card);
+    border: 1px solid var(--bg-card-border);
+    border-radius: 10px;
+    padding: 1.4em 1.2em;
+    flex: 1;
+    min-width: 235px;
+    max-width: 295px;
+    text-align: center;
+  }
+  .arch-card h3 {
+    font-family: var(--font-en);
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--gold);
+    margin-bottom: 0.4em;
+    letter-spacing: 0.02em;
+  }
+  .arch-card p {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: var(--ivory-dim);
+  }
+
+  /* ===== Info Cards (vertical list) ===== */
+  .info-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    margin-top: 1em;
+  }
+  .info-card {
+    background: var(--bg-card);
+    border: 1px solid var(--bg-card-border);
+    border-radius: 8px;
+    padding: 1em 1.2em;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 1em;
+  }
+  .info-card .icon {
+    font-size: 1.6rem;
+    flex-shrink: 0;
+    width: 2em;
+    text-align: center;
+  }
+  .info-card .info-text h3 {
+    font-size: 1.1rem;
+    margin-bottom: 0.15em;
+    color: var(--ivory);
+  }
+  .info-card .info-text p {
+    font-size: 0.98rem;
+    color: var(--ivory-dim);
+    line-height: 1.4;
+  }
+
+  /* ===== Comparison Table ===== */
+  .compare-table {
+    width: 100%;
+    margin-top: 1em;
+    border-collapse: collapse;
+    font-size: 1.02rem;
+  }
+  .compare-table th {
+    font-family: var(--font-en);
+    font-weight: 600;
+    color: var(--gold);
+    text-align: left;
+    padding: 0.6em 0.8em;
+    border-bottom: 1px solid var(--gold-border);
+    font-size: 0.98rem;
+    letter-spacing: 0.03em;
+  }
+  .compare-table td {
+    padding: 0.55em 0.8em;
+    color: var(--ivory-sub);
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 1rem;
+  }
+  .compare-table tr:last-child td { border-bottom: none; }
+
+  /* ===== Flow Diagram ===== */
+  .flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.8em;
+    margin-top: 1.2em;
+    flex-wrap: wrap;
+  }
+  .flow-box {
+    background: var(--bg-card);
+    border: 1px solid var(--bg-card-border);
+    border-radius: 8px;
+    padding: 0.8em 1.2em;
+    text-align: center;
+    min-width: 175px;
+  }
+  .flow-box h3 {
+    font-size: 1.05rem;
+    color: var(--ivory);
+    margin-bottom: 0.2em;
+  }
+  .flow-box p {
+    font-size: 0.9rem;
+    color: var(--ivory-dim);
+  }
+  .flow-box.highlight-box {
+    border-color: var(--gold-border);
+    background: rgba(198, 165, 92, 0.06);
+  }
+  .flow-box.highlight-box h3 { color: var(--gold); }
+  .flow-arrow {
+    color: var(--ivory-dim);
+    font-size: 1.1rem;
+  }
+
+  /* ===== Tag / Badge ===== */
+  .tag-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 1em;
+  }
+  .tag {
+    font-family: var(--font-en);
+    font-size: 0.98rem;
+    padding: 0.35em 0.9em;
+    border: 1px solid var(--gold-border);
+    border-radius: 20px;
+    color: var(--gold-light);
+    background: rgba(198, 165, 92, 0.08);
+    letter-spacing: 0.02em;
+  }
+
+  /* ===== Section Label ===== */
+  .section-label {
+    font-family: var(--font-en);
+    font-size: 0.92rem;
+    color: var(--gold);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 0.6em;
+  }
+
+  /* ===== Utility ===== */
+  kbd {
+    background: var(--bg-card);
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: 0.8em;
+    color: var(--ivory-sub);
+  }
+  .subtitle-accent {
+    font-family: var(--font-en);
+    font-size: clamp(1.1rem, 2.2vw, 1.5rem);
+    color: var(--gold);
+    margin-bottom: 1em;
+    letter-spacing: 0.01em;
+    font-weight: 400;
+  }
+  .hint-text {
+    color: var(--ivory-dim);
+    font-size: 0.98rem;
+    font-family: var(--font-en);
+    letter-spacing: 0.02em;
+  }
+  .thankyou-sub {
+    color: var(--gold);
+    margin-top: 0.5em;
+    font-size: clamp(1.05rem, 2vw, 1.4rem);
+  }
+  .code-note {
+    margin-top: 1em;
+    color: var(--ivory-dim);
+    font-size: 1rem;
+  }
+  .spacer { height: 0.8em; }
+
+  /* ===== Slide Image ===== */
+  .slide-image {
+    max-width: 90%;
+    max-height: 75vh;
+    object-fit: contain;
+    border-radius: 10px;
+  }
+
+  /* ===== Title Slide ===== */
+  .title-slide {
+    justify-content: center;
+  }
+  .presenter-info {
+    margin-top: 1.5em;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3em;
+  }
+  .presenter-name {
+    font-family: var(--font-en);
+    font-size: clamp(1.2rem, 2.4vw, 1.8rem);
+    color: var(--ivory);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .presenter-affiliation {
+    font-family: var(--font-en);
+    font-size: clamp(1.05rem, 1.8vw, 1.35rem);
+    color: var(--ivory-sub);
+    letter-spacing: 0.02em;
+  }
+  .presenter-email {
+    font-family: var(--font-en);
+    font-size: clamp(1rem, 1.6vw, 1.2rem);
+    color: var(--ivory-dim);
+    letter-spacing: 0.02em;
+  }
+  .presenter-date {
+    font-family: var(--font-en);
+    font-size: clamp(1rem, 1.6vw, 1.2rem);
+    color: var(--ivory-dim);
+    margin-top: 0.3em;
+    letter-spacing: 0.05em;
+  }
+  .title-logos {
+    position: absolute;
+    bottom: 2.5rem;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 3rem;
+    z-index: 3;
+  }
+  .title-logo {
+    height: clamp(36px, 5vh, 64px);
+    width: auto;
+    object-fit: contain;
+    opacity: 0.85;
+  }
+
+  /* ===== PDF Download Button ===== */
+  .pdf-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--ivory-dim);
+    padding: 4px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: var(--font-en);
+    font-size: 0.68rem;
+    letter-spacing: 0.03em;
+    transition: all 0.2s;
+  }
+  .pdf-btn:hover {
+    background: var(--gold-dim);
+    border-color: var(--gold-border);
+    color: var(--gold-light);
+  }
+  .pdf-btn svg {
+    width: 14px;
+    height: 14px;
+    fill: currentColor;
+  }
+
+  /* ===== Print / PDF Styles ===== */
+  @media print {
+    @page {
+      size: landscape;
+      margin: 0;
+    }
+    *, *::before, *::after {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      color-adjust: exact !important;
+    }
+    html, body {
+      width: 100%;
+      height: auto;
+      overflow: visible;
+      background: var(--bg-deep) !important;
+    }
+    /* Hide UI overlays */
+    .progress-bar,
+    .slide-counter,
+    .speaker-notes,
+    .top-bar,
+    .settings-overlay,
+    .settings-popup {
+      display: none !important;
+    }
+    .deck {
+      position: static;
+      width: 100%;
+      height: auto;
+      overflow: visible;
+    }
+    .slide {
+      position: relative !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+      z-index: auto !important;
+      transform: none !important;
+      transition: none !important;
+      page-break-after: always;
+      break-after: page;
+      display: flex !important;
+    }
+    .slide:last-of-type {
+      page-break-after: auto;
+      break-after: auto;
+    }
+    /* Show all fragments */
+    .fragment {
+      opacity: 1 !important;
+      transform: none !important;
+      transition: none !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="deck transition-fade" id="deck">
+
+  <!-- ===== Slide 0: Title ===== -->
+  <section class="slide active" id="slide-0"
+           data-notes="오프닝 슬라이드입니다. 프로젝트 소개와 목표를 간략히 언급하세요.">
+    <div class="slide-content title-slide">
+      <h1 class="fragment">Regular Meeting</h1>
+      <div class="fragment presenter-info">
+        <p class="presenter-name">Youlkyeng Lee</p>
+        <p class="presenter-affiliation">University of Ulsan, ISLAB</p>
+        <p class="presenter-email">yklee00815@gmail.com</p>
+        <p class="presenter-date">03. 13. 2026</p>
+      </div>
+    </div>
+    <div class="title-logos">
+      <img src="log/UOU.png" alt="University Logo" class="title-logo">
+      <img src="log/ISLAB.png" alt="ISLAB Logo" class="title-logo">
+    </div>
+  </section>
+
+  <!-- ===== Slide 1: Activities ===== -->
+  <section class="slide" id="slide-1"
+           data-notes="지난주 활동 내역과 이번주 계획을 발표합니다.">
+    <div class="slide-content align-left">
+      <p class="fragment section-label">Activities</p>
+      <h3 class="fragment week-heading">Last Week</h3>
+      <ul>
+        <li class="fragment">Prepared ACCESS
+          <ul>
+            <li class="fragment">Title: <span style="color: var(--gold-light);">SemEdge-Mamba: Multi-scale Semantic Walk and Edge-Conditioned Selection for Vehicle State Prediction</span></li>
+            <li class="fragment">Preparing the Argoverse2 Dataset
+              <ul>
+                <li class="fragment">Train: 190k / Val: 24k / Test: 24k</li>
+                <li class="fragment">Convert csv file to bin and npz for sequence and graph data (1m 30s for one file)</li>
+              </ul>
+            </li>
+            <li class="fragment">Prepared Claude Code seminar</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="fragment week-divider"></div>
+      <h3 class="fragment week-heading">This Week</h3>
+      <ul>
+        <li class="fragment">Prepare ACCESS
+          <ul>
+            <li class="fragment">Changing line-based walk algorithm to other</li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ===== Slide 2: Contents — Text ===== -->
+  <section class="slide" id="slide-2"
+           data-notes="논문의 전체 구성을 설명합니다.">
+    <div class="slide-content align-left">
+      <p class="fragment section-label">Contents</p>
+      <ul>
+        <li class="fragment">Introduction</li>
+        <li class="fragment">Related Work
+          <ul>
+            <li class="fragment">State Space Model</li>
+            <li class="fragment">Driving Trajectory and State Prediction</li>
+          </ul>
+        </li>
+        <li class="fragment">Proposed Methods
+          <ul>
+            <li class="fragment">Preliminaries
+              <ul>
+                <li class="fragment">Mamba &amp; Mamba2 <span class="tag" style="font-size:0.75em;">draft</span></li>
+              </ul>
+            </li>
+            <li class="fragment">Multi-way Semantic Walk Sequence
+              <ul>
+                <li class="fragment">BFS &amp; DFS Walk Sequence <span class="tag" style="font-size:0.75em;">draft</span></li>
+                <li class="fragment">Line-Relation Transition <span class="tag" style="font-size:0.75em;">draft</span></li>
+                <li class="fragment">Semantic Walk Embedding <span class="tag" style="font-size:0.75em;">draft</span></li>
+              </ul>
+            </li>
+            <li class="fragment">Edge-Conditioned Selection
+              <ul>
+                <li class="fragment">Edge Feature Aggregation <span class="tag" style="font-size:0.75em;">draft</span></li>
+                <li class="fragment">Physics-informed SSM <span class="tag" style="font-size:0.75em;">draft</span></li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ===== Slide 3: Contents — Image ===== -->
+  <section class="slide" id="slide-3"
+           data-notes="Contents 관련 이미지입니다.">
+    <div class="slide-content">
+      <p class="fragment section-label">Contents</p>
+      <img class="fragment slide-image" src="data/2026-03-13/data1.png" alt="Data Image">
+    </div>
+  </section>
+
+  <!-- ===== Slide 4: Thank You ===== -->
+  <section class="slide" id="slide-4"
+           data-notes="마지막 슬라이드입니다. Q&A 시간을 가지세요.">
+    <div class="slide-content">
+      <h1 class="fragment" style="font-size: clamp(1.8rem, 5vw, 3.5rem);">Thank You!</h1>
+      <p class="fragment thankyou-sub">Q &amp; A</p>
+    </div>
+  </section>
+
+  <!-- ===== UI Overlays ===== -->
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="slide-counter" id="slideCounter">1 / 5</div>
+  <div class="speaker-notes" id="speakerNotes"></div>
+
+  <div class="top-bar">
+    <button class="pdf-btn" id="pdfBtn" title="PDF로 저장">
+      <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+      PDF
+    </button>
+    <button class="settings-btn" id="settingsBtn" title="Settings">
+      <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.49.49 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.48.48 0 00-.48-.41h-3.84a.48.48 0 00-.48.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 00-.59.22L2.74 8.87a.48.48 0 00.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.26.41.48.41h3.84c.24 0 .44-.17.48-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6A3.6 3.6 0 1115.6 12 3.61 3.61 0 0112 15.6z"/></svg>
+    </button>
+  </div>
+
+  <!-- ===== Settings Popup ===== -->
+  <div class="settings-overlay" id="settingsOverlay"></div>
+  <div class="settings-popup" id="settingsPopup">
+    <div class="settings-header">
+      <h3>Settings</h3>
+      <button class="settings-close" id="settingsClose">&times;</button>
+    </div>
+
+    <div class="settings-section">
+      <label class="settings-label">Background</label>
+      <div class="settings-row">
+        <button class="bg-option active" data-bg="black">Black</button>
+        <button class="bg-option" data-bg="white">White</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <label class="settings-label">Font Color</label>
+      <div class="color-presets" id="colorPresets">
+        <button class="color-swatch active" data-color="#F0E8D8" style="background:#F0E8D8;" title="#F0E8D8"></button>
+        <button class="color-swatch" data-color="#C6A55C" style="background:#C6A55C;" title="#C6A55C"></button>
+        <button class="color-swatch" data-color="#FFFFFF" style="background:#FFFFFF;" title="#FFFFFF"></button>
+      </div>
+      <div class="settings-row" style="margin-top:8px;">
+        <span class="hex-label">#</span>
+        <input type="text" class="hex-input" id="hexInput" maxlength="6" placeholder="HEX code" spellcheck="false">
+        <button class="hex-apply" id="hexApply">Apply</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <label class="settings-label">Transition</label>
+      <div class="settings-row">
+        <button class="trans-option active" data-transition="fade">Fade</button>
+        <button class="trans-option" data-transition="slide">Slide</button>
+        <button class="trans-option" data-transition="zoom">Zoom</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ===== State =====
+  const state = {
+    current: 0,
+    transitioning: false,
+    notesVisible: false,
+  };
+
+  const deck = document.getElementById('deck');
+  const slides = deck.querySelectorAll('.slide');
+  const total = slides.length;
+  const progressFill = document.getElementById('progressFill');
+  const slideCounter = document.getElementById('slideCounter');
+  const speakerNotes = document.getElementById('speakerNotes');
+  const TRANSITION_DURATION = 600;
+  const FRAGMENT_STAGGER = 120; // ms between each fragment reveal
+
+  // ===== Initialize =====
+  function init() {
+    const hash = parseInt(location.hash.replace('#', ''), 10);
+    if (!isNaN(hash) && hash >= 0 && hash < total) {
+      slides[0].classList.remove('active');
+      slides[hash].classList.add('active');
+      state.current = hash;
+    }
+    updateProgress();
+    autoRevealFragments(slides[state.current]);
+
+    initSettings();
+  }
+
+  // ===== Fragment Management — auto stagger reveal on slide enter =====
+  function autoRevealFragments(slideEl) {
+    const fragments = Array.from(slideEl.querySelectorAll('.fragment'));
+    fragments.forEach((f, i) => {
+      f.classList.remove('visible');
+      setTimeout(() => {
+        f.classList.add('visible');
+      }, 150 + i * FRAGMENT_STAGGER);
+    });
+  }
+
+  function hideAllFragments(slideEl) {
+    slideEl.querySelectorAll('.fragment').forEach(f => f.classList.remove('visible'));
+  }
+
+  // ===== Slide Navigation — always one full page =====
+  function goTo(index, direction) {
+    if (state.transitioning || index === state.current) return;
+    if (index < 0 || index >= total) return;
+
+    state.transitioning = true;
+    const prev = slides[state.current];
+    const next = slides[index];
+    const transitionType = deck.className.includes('transition-slide') ? 'slide'
+                         : deck.className.includes('transition-zoom') ? 'zoom'
+                         : 'fade';
+
+    // Hide fragments of outgoing slide
+    hideAllFragments(prev);
+
+    if (transitionType === 'slide') {
+      const exitDir = direction > 0 ? 'exit-left' : 'exit-right';
+      const enterDir = direction > 0 ? 'enter-right' : 'enter-left';
+      next.classList.add(enterDir);
+      next.style.visibility = 'visible';
+      next.style.opacity = '1';
+
+      void next.offsetWidth;
+
+      prev.classList.remove('active');
+      prev.classList.add(exitDir);
+      next.classList.remove(enterDir);
+      next.classList.add('active');
+    } else {
+      prev.classList.remove('active');
+      if (transitionType === 'zoom') {
+        prev.classList.add(direction > 0 ? 'exit-left' : 'exit-right');
+      }
+      next.classList.add('active');
+    }
+
+    state.current = index;
+    updateProgress();
+    syncHash();
+
+    // Auto-reveal fragments of incoming slide
+    autoRevealFragments(next);
+
+    setTimeout(() => {
+      slides.forEach(s => {
+        s.classList.remove('exit-left', 'exit-right', 'enter-left', 'enter-right');
+        if (!s.classList.contains('active')) {
+          s.style.visibility = '';
+          s.style.opacity = '';
+        }
+      });
+      state.transitioning = false;
+    }, TRANSITION_DURATION);
+  }
+
+  function next() {
+    goTo(state.current + 1, 1);
+  }
+
+  function prev() {
+    goTo(state.current - 1, -1);
+  }
+
+  // ===== Progress & UI =====
+  function updateProgress() {
+    const pct = total > 1 ? (state.current / (total - 1)) * 100 : 0;
+    progressFill.style.width = pct + '%';
+    slideCounter.textContent = (state.current + 1) + ' / ' + total;
+
+    const notes = slides[state.current].dataset.notes || '';
+    speakerNotes.textContent = notes;
+  }
+
+  function syncHash() {
+    history.replaceState(null, '', '#' + state.current);
+  }
+
+  function toggleNotes() {
+    state.notesVisible = !state.notesVisible;
+    speakerNotes.classList.toggle('visible', state.notesVisible);
+  }
+
+  // ===== Keyboard Navigation =====
+  document.addEventListener('keydown', function (e) {
+    switch (e.key) {
+      case 'ArrowRight':
+      case 'ArrowDown':
+      case ' ':
+      case 'PageDown':
+        e.preventDefault();
+        next();
+        break;
+      case 'ArrowLeft':
+      case 'ArrowUp':
+      case 'PageUp':
+        e.preventDefault();
+        prev();
+        break;
+      case 'Home':
+        e.preventDefault();
+        goTo(0, -1);
+        break;
+      case 'End':
+        e.preventDefault();
+        goTo(total - 1, 1);
+        break;
+      case 'n':
+      case 'N':
+        toggleNotes();
+        break;
+      case 'f':
+      case 'F':
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        } else {
+          document.exitFullscreen();
+        }
+        break;
+    }
+  });
+
+  // ===== Hash Navigation (back/forward) =====
+  window.addEventListener('hashchange', function () {
+    const hash = parseInt(location.hash.replace('#', ''), 10);
+    if (!isNaN(hash) && hash >= 0 && hash < total && hash !== state.current) {
+      const dir = hash > state.current ? 1 : -1;
+      goTo(hash, dir);
+    }
+  });
+
+  // ===== Touch / Swipe Navigation =====
+  let touchStartX = 0;
+  let touchStartY = 0;
+
+  deck.addEventListener('touchstart', function (e) {
+    touchStartX = e.changedTouches[0].clientX;
+    touchStartY = e.changedTouches[0].clientY;
+  }, { passive: true });
+
+  deck.addEventListener('touchend', function (e) {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    const absDx = Math.abs(dx);
+    const absDy = Math.abs(dy);
+
+    if (absDx > 50 && absDx > absDy) {
+      if (dx < 0) next();
+      else prev();
+    }
+  }, { passive: true });
+
+  // ===== Click Navigation (left/right halves) =====
+  deck.addEventListener('click', function (e) {
+    if (e.target.closest('button, a, input, textarea, select, .settings-popup, .settings-overlay')) return;
+    const x = e.clientX / window.innerWidth;
+    if (x > 0.5) next();
+    else prev();
+  });
+
+  // ===== PDF Download =====
+  document.getElementById('pdfBtn').addEventListener('click', function (e) {
+    e.stopPropagation();
+    // Reveal all fragments before printing
+    slides.forEach(s => {
+      s.querySelectorAll('.fragment').forEach(f => f.classList.add('visible'));
+    });
+    setTimeout(() => {
+      window.print();
+      // Restore after print dialog closes
+      setTimeout(() => {
+        slides.forEach((s, i) => {
+          if (i === state.current) {
+            autoRevealFragments(s);
+          } else {
+            hideAllFragments(s);
+          }
+        });
+      }, 500);
+    }, 100);
+  });
+
+  // ===== Settings =====
+  function initSettings() {
+    const settingsBtn = document.getElementById('settingsBtn');
+    const settingsPopup = document.getElementById('settingsPopup');
+    const settingsOverlay = document.getElementById('settingsOverlay');
+    const settingsClose = document.getElementById('settingsClose');
+    const hexInput = document.getElementById('hexInput');
+    const hexApply = document.getElementById('hexApply');
+
+    function openSettings() {
+      settingsPopup.classList.add('visible');
+      settingsOverlay.classList.add('visible');
+    }
+    function closeSettings() {
+      settingsPopup.classList.remove('visible');
+      settingsOverlay.classList.remove('visible');
+    }
+
+    settingsBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      openSettings();
+    });
+    settingsClose.addEventListener('click', closeSettings);
+    settingsOverlay.addEventListener('click', closeSettings);
+    settingsPopup.addEventListener('click', function (e) { e.stopPropagation(); });
+
+    // --- Background ---
+    const WHITE_PRESETS = ['#1A1A1A', '#333333', '#C6A55C'];
+    const BLACK_PRESETS = ['#F0E8D8', '#C6A55C', '#FFFFFF'];
+    let currentBg = 'black';
+
+    function updateColorPresets(bg) {
+      const presets = bg === 'white' ? WHITE_PRESETS : BLACK_PRESETS;
+      const container = document.getElementById('colorPresets');
+      container.innerHTML = '';
+      presets.forEach((c, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'color-swatch' + (i === 0 ? ' active' : '');
+        btn.dataset.color = c;
+        btn.style.background = c;
+        btn.title = c;
+        if (c === '#FFFFFF' || c === '#F0E8D8') {
+          btn.style.border = '2px solid rgba(128,128,128,0.3)';
+        }
+        btn.addEventListener('click', function () {
+          container.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+          btn.classList.add('active');
+          applyFontColor(c);
+        });
+        container.appendChild(btn);
+      });
+      applyFontColor(presets[0]);
+    }
+
+    document.querySelectorAll('.bg-option').forEach(btn => {
+      btn.addEventListener('click', function () {
+        document.querySelectorAll('.bg-option').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentBg = btn.dataset.bg;
+
+        if (currentBg === 'white') {
+          document.documentElement.classList.add('theme-white');
+          document.body.style.background = '#F5F5F5';
+        } else {
+          document.documentElement.classList.remove('theme-white');
+          document.body.style.background = '';
+        }
+        updateColorPresets(currentBg);
+      });
+    });
+
+    // --- Font Color ---
+    function applyFontColor(hex) {
+      document.documentElement.style.setProperty('--ivory', hex);
+      document.documentElement.style.setProperty('--ivory-sub', hex + 'CC');
+      document.documentElement.style.setProperty('--ivory-dim', hex + '88');
+    }
+
+    document.querySelectorAll('.color-swatch').forEach(btn => {
+      btn.addEventListener('click', function () {
+        document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+        btn.classList.add('active');
+        applyFontColor(btn.dataset.color);
+      });
+    });
+
+    hexApply.addEventListener('click', function () {
+      let val = hexInput.value.trim().replace('#', '');
+      if (/^[0-9A-Fa-f]{3,6}$/.test(val)) {
+        if (val.length === 3) val = val[0]+val[0]+val[1]+val[1]+val[2]+val[2];
+        const hex = '#' + val.toUpperCase();
+        document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+        applyFontColor(hex);
+        hexInput.value = val.toUpperCase();
+      }
+    });
+
+    hexInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        hexApply.click();
+      }
+      e.stopPropagation();
+    });
+    hexInput.addEventListener('keyup', function (e) { e.stopPropagation(); });
+
+    // --- Transition ---
+    document.querySelectorAll('.trans-option').forEach(btn => {
+      btn.addEventListener('click', function () {
+        document.querySelectorAll('.trans-option').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const currentTheme = deck.className.includes('theme-white') ? ' theme-white' : '';
+        deck.className = 'deck transition-' + btn.dataset.transition;
+      });
+    });
+
+    // Close on Escape
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && settingsPopup.classList.contains('visible')) {
+        closeSettings();
+        e.stopPropagation();
+      }
+    });
+  }
+
+  // ===== Start =====
+  init();
+})();
+</script>
+</body>
+</html>
