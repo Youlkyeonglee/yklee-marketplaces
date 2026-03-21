@@ -1,0 +1,8 @@
+{
+    "name": "react-native-expo-init",
+    "description": "A plugin for the react native expo project initialization",
+    "version": "0.0.0",
+    "author": {
+        "name": "yklee"
+    }
+}

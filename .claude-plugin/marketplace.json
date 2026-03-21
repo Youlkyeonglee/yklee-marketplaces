@@ -13,6 +13,15 @@
             "author": {
                 "name": "yklee"
             }
+        },
+        {
+            "name": "react-native-expo-init",
+            "source": "./plugins/react-native-expo-init-plugin",
+            "description": "react native expo project initialization plugin",
+            "version": "0.0.0",
+            "author": {
+                "name": "yklee"
+            }
         }
     ]
 }
